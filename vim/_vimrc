@@ -65,6 +65,7 @@ endif
 
 set tabstop=4
 set shiftwidth=4
+set expandtab
 
 " if we have a mouse, use it
 if has('mouse')
