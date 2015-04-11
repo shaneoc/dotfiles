@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+import sys
+import os
+import re
+
+class Script:
+    def __init__(self, name, path, helptext, category):
+        self.name = name
+        self.path = path
+        self.helptext = helptext
+        self.category = category
+
+def find_scripts(pattern):
+    search_paths = [p for p in os.getenv('SHANE_SC_PATH', '').split(':') if p]
+
+    scripts = []
+    categories = set()
+    for path in search_paths:
+        for filename in os.listdir(path):
+            filepath = os.path.join(path, filename)
+
+            if (os.path.isfile(filepath) and os.access(filepath, os.X_OK) and not
+                    os.path.samefile(filepath, __file__)):
+
+                name = os.path.basename(filepath)
+
+                with open(filepath, 'rU') as f:
+                    script_header = f.read(2048)
+
+                # [ -~] matches all printable characters (range from space to tilde)
+                m = re.search(r'sc-help:\s*([ -~]+)', script_header)
+                helptext = m.group(1).rstrip() if m != None else ''
+
+                m = re.search(r'sc-category:\s*([ -~]+)', script_header)
+                category = m.group(1).rstrip() if m != None else 'Uncategorized'
+
+                if pattern == None:
+                    add_script = True
+                else:
+                    add_script = False
+                    if re.search(pattern, name, re.I)     != None: add_script = True
+                    if re.search(pattern, helptext, re.I) != None: add_script = True
+                    if re.search(pattern, category, re.I) != None: add_script = True
+
+                if add_script:
+                    categories.add(category)
+
+                    scripts.append(Script(
+                        name     = name,
+                        path     = filepath,
+                        helptext = helptext,
+                        category = category))
+
+    scripts.sort(key = lambda script: script.name)
+    return scripts, sorted(categories)
+
+if len(sys.argv) < 2 or sys.argv[1] == 'ls':
+    if len(sys.argv) == 1:
+        print('Usage: {} <script>'.format(os.path.basename(sys.argv[0])))
+        print('')
+
+    pattern = sys.argv[2] if len(sys.argv) >= 3 else None
+    scripts, categories = find_scripts(pattern)
+
+    def highlight(string):
+        def repl(m):
+            return '\033[0;32m' + m.group() + '\033[0m'
+        return re.sub(pattern, repl, string, flags = re.I) if pattern else string
+
+    def print_category(this_category):
+        print(highlight(this_category) + ':')
+        for script in scripts:
+            if script.category == this_category:
+                if script.helptext:
+                    print(' ' + highlight(script.name) + ': ' +
+                            highlight(script.helptext))
+                else:
+                    print(' ' + highlight(script.name))
+        print('')
+
+    # print uncategorized scripts first
+    if 'Uncategorized' in categories:
+        print_category('Uncategorized')
+
+    for category in categories:
+        if category != 'Uncategorized':
+            print_category(category)
+
+elif sys.argv[1] == '--names':
+    scripts, _ = find_scripts(pattern = None)
+    for script in scripts:
+        print(script.name)
+
+else:
+    scripts, _ = find_scripts(pattern = None)
+    for script in scripts:
+        if script.name == sys.argv[1]:
+            os.execvp(script.path, sys.argv[1:])
+
+    sys.exit('Error: {} is not a valid script name'.format(sys.argv[1]))
