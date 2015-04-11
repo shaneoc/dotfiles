@@ -15,14 +15,18 @@ def find_scripts(pattern):
 
     scripts = []
     categories = set()
+    names = set()
     for path in search_paths:
         for filename in os.listdir(path):
             filepath = os.path.join(path, filename)
 
             if (os.path.isfile(filepath) and os.access(filepath, os.X_OK) and not
-                    os.path.samefile(filepath, __file__)):
+                    os.path.samefile(filepath, __file__) and filename not in names):
 
-                name = os.path.basename(filepath)
+                # ensure we only ever look at the first script in the search
+                # path with a given name (even if the first script doesn't
+                # match the filter)
+                names.add(filename)
 
                 with open(filepath, 'rU') as f:
                     script_header = f.read(2048)
@@ -38,7 +42,7 @@ def find_scripts(pattern):
                     add_script = True
                 else:
                     add_script = False
-                    if re.search(pattern, name, re.I)     != None: add_script = True
+                    if re.search(pattern, filename, re.I) != None: add_script = True
                     if re.search(pattern, helptext, re.I) != None: add_script = True
                     if re.search(pattern, category, re.I) != None: add_script = True
 
@@ -46,7 +50,7 @@ def find_scripts(pattern):
                     categories.add(category)
 
                     scripts.append(Script(
-                        name     = name,
+                        name     = filename,
                         path     = filepath,
                         helptext = helptext,
                         category = category))
@@ -90,6 +94,14 @@ elif sys.argv[1] == '--names':
     scripts, _ = find_scripts(pattern = None)
     for script in scripts:
         print(script.name)
+
+elif sys.argv[1] == '--path':
+    if len(sys.argv) < 3:
+        sys.exit('Usage: {} --path <script>'.format(os.path.basename(sys.argv[0])))
+    scripts, _ = find_scripts(pattern = None)
+    for script in scripts:
+        if script.name == sys.argv[2]:
+            print(script.path)
 
 else:
     scripts, _ = find_scripts(pattern = None)
