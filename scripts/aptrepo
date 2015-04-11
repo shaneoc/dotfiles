@@ -1,2 +1,4 @@
 #!/bin/bash
+# sc-help: lists currently enabled APT repos
+# sc-category: System
 exec grep "^\w*deb" /etc/apt/sources.list /etc/apt/sources.list.d/*

@@ -19,16 +19,52 @@ path_remove () {
 path_prepend () { path_remove "$1"; export PATH="$1:$PATH"; }
 path_append ()  { path_remove "$1"; export PATH="$PATH:$1"; }
 
+script_path_remove () {
+    tmp=":$SHANE_SC_PATH:"
+    while [[ "$tmp" =~ ":$1:" ]]; do
+        tmp="${tmp/:$1:/:}"
+    done
+    tmp="${tmp%:}"
+    tmp="${tmp#:}"
+    export SHANE_SC_PATH="$tmp"
+}
+script_path_prepend () {
+    script_path_remove "$1"
+    export SHANE_SC_PATH="$1:$SHANE_SC_PATH"
+}
+script_path_append () {
+    script_path_remove "$1"
+    export SHANE_SC_PATH="$SHANE_SC_PATH:$1"
+}
+
 # Wrap in a function in order to avoid leaking local variables
 source_files () {
     # Get path to dotfiles directory
     local script_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
     local dotfiles_dir="$(dirname "$(dirname "$script_dir")")"
 
-    # Source all *.bashrc.sh files
+    # Source all *.bashrc.sh files in the dotfiles directory
     while read -d '' -r bashrc_file <&9; do
         source "$bashrc_file"
     done 9< <(find ${dotfiles_dir} -mindepth 2 -maxdepth 3 -regex '.*\.bashrc\.sh' -print0)
+
+    # Collect all paths on the SHANE_BASHRC_PATH into an array
+    local paths=()
+    local oldIFS="$IFS"
+    IFS=:
+    for path in $SHANE_BASHRC_PATH; do
+        if [ -n "$path" -a -d "$path" ]; then
+            paths+=("$path")
+        fi
+    done
+    IFS="$oldIFS"
+
+    # Source all *.bashrc.sh files in the paths from the SHANE_BASHRC_PATH
+    for path in "${paths[@]}"; do
+        while read -d '' -r bashrc_file <&9; do
+            source "$bashrc_file"
+        done 9< <(find ${path} -maxdepth 2 -regex '.*\.bashrc\.sh' -print0)
+    done
 }
 source_files
 
@@ -36,4 +72,7 @@ source_files
 unset path_remove
 unset path_prepend
 unset path_append
+unset script_path_remove
+unset script_path_prepend
+unset script_path_append
 unset source_files

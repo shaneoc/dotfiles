@@ -1,0 +1,24 @@
+#!/bin/bash
+# sc-help: starts a bash shell that runs *.bashrc.sh files in the directory specified
+# sc-category: Development
+
+if [ ! -d "$1" ]; then
+    echo "Usage: dev <dir name>"
+    exit 1
+fi
+cd "$1"
+dev_path="$(pwd)"
+
+if [ -n "$SHANE_BASHRC_PATH" ]; then
+    export SHANE_BASHRC_PATH="${dev_path}:${SHANE_BASHRC_PATH}"
+else
+    export SHANE_BASHRC_PATH="$dev_path"
+fi
+
+if [ -n "$SHANE_DEV" ]; then
+    export SHANE_DEV="$(basename $(pwd)) $SHANE_DEV"
+else
+    export SHANE_DEV="$(basename $(pwd))"
+fi
+
+bash

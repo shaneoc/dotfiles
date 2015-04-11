@@ -1,5 +1,7 @@
 #!/bin/bash
 # vim: et sw=4 ts=4
+# sc-help: manages dotfile git repos
+# sc-category: System
 
 set -e
 
