@@ -1,0 +1,9 @@
+#!/bin/bash
+# sc-help: sets the brightness level on a Macbook Air keyboard
+# sc-category: System
+
+if [ $# -eq 0 ]; then
+    echo "Syntax: $(basename "$0") <level 0-255>"
+else
+    sudo sh -c "echo $1 > /sys/class/leds/smc\:\:kbd_backlight/brightness"
+fi

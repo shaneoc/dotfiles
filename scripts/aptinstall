@@ -1,0 +1,4 @@
+#!/bin/sh
+# sc-help: installs a package through APT
+# sc-category: System
+sudo apt-get install "$@"
