@@ -7,34 +7,36 @@ case $- in
 esac
 
 # Define helper functions for *.bashrc.sh scripts to use
-path_remove () {
-    tmp=":$PATH:"
-    while [[ "$tmp" =~ ":$1:" ]]; do
-        tmp="${tmp/:$1:/:}"
+path_list_remove () {
+    tmp=":$1:"
+    while [[ "$tmp" =~ ":$2:" ]]; do
+        tmp="${tmp/:$2:/:}"
     done
     tmp="${tmp%:}"
     tmp="${tmp#:}"
-    export PATH="$tmp"
+    echo "$tmp"
 }
-path_prepend () { path_remove "$1"; export PATH="$1:$PATH"; }
-path_append ()  { path_remove "$1"; export PATH="$PATH:$1"; }
 
-script_path_remove () {
-    tmp=":$SHANE_SC_PATH:"
-    while [[ "$tmp" =~ ":$1:" ]]; do
-        tmp="${tmp/:$1:/:}"
-    done
-    tmp="${tmp%:}"
-    tmp="${tmp#:}"
-    export SHANE_SC_PATH="$tmp"
-}
+path_list_prepend () { echo "$2:$(path_list_remove "$1" "$2")"; }
+path_list_append () { echo "$(path_list_remove "$1" "$2"):$2"; }
+
+path_prepend () { export PATH="$(path_list_prepend $PATH $1)"; }
+path_append () { export PATH="$(path_list_append $PATH $1)"; }
+
 script_path_prepend () {
-    script_path_remove "$1"
-    export SHANE_SC_PATH="$1:$SHANE_SC_PATH"
+    export SHANE_SC_PATH="$(path_list_prepend $SHANE_SC_PATH $1)"
 }
+
 script_path_append () {
-    script_path_remove "$1"
-    export SHANE_SC_PATH="$SHANE_SC_PATH:$1"
+    export SHANE_SC_PATH="$(path_list_append $SHANE_SC_PATH $1)"
+}
+
+python3_path_prepend () {
+    export SHANE_PYTHON3_PATH="$(path_list_prepend $SHANE_PYTHON3_PATH $1)"
+}
+
+python3_path_append () {
+    export SHANE_PYTHON3_PATH="$(path_list_append $SHANE_PYTHON3_PATH $1)"
 }
 
 # Wrap in a function in order to avoid leaking local variables
@@ -69,10 +71,13 @@ source_files () {
 source_files
 
 # Remove stuff I don't need in the shell
-unset path_remove
+unset path_list_remove
+unset path_list_prepend
+unset path_list_append
 unset path_prepend
 unset path_append
-unset script_path_remove
 unset script_path_prepend
 unset script_path_append
+unset python3_path_prepend
+unset python3_path_append
 unset source_files
