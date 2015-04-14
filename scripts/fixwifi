@@ -1,0 +1,4 @@
+#!/bin/bash
+# sc-help: restarts network-manager to fix the wifi
+# sc-category: System
+sudo service network-manager restart

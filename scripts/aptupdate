@@ -1,2 +1,4 @@
 #!/bin/sh
+# sc-help: updates all packages through APT
+# sc-category: System
 sudo apt-get update && sudo apt-get dist-upgrade

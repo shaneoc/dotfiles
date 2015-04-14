@@ -29,6 +29,8 @@ if [ -n "$ACDS_VERSION" ]; then
         qk_dirname=""
     fi
     PS1+="$green[$qk_dirname$ACDS_VERSION/$ACDS_BUILD_NUMBER]"
+elif [ -n "$SHANE_DEV" ]; then
+    PS1+="$green[dev $SHANE_DEV]"
 else
     if [ -n "$SSH_TTY" ]; then
         PS1+="$red\h"
