@@ -20,6 +20,9 @@ unbind %
 bind s split-window -v
 bind v split-window -h
 
+# use o to change sessions (was s by default)
+bind o choose-tree
+
 # Notify me when window contents change
 setw -g monitor-activity on
 set -g visual-activity on
