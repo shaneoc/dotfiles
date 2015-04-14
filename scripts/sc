@@ -90,14 +90,26 @@ if len(sys.argv) < 2 or sys.argv[1] == 'ls':
         if category != 'Uncategorized':
             print_category(category)
 
+# this is used for bash tab completion
 elif sys.argv[1] == '--names':
+    print('edit')
+    print('path')
     scripts, _ = find_scripts(pattern = None)
     for script in scripts:
         print(script.name)
 
-elif sys.argv[1] == '--path':
+elif sys.argv[1] == 'edit':
     if len(sys.argv) < 3:
-        sys.exit('Usage: {} --path <script>'.format(os.path.basename(sys.argv[0])))
+        sys.exit('Usage: {} edit <script>'.format(os.path.basename(sys.argv[0])))
+    scripts, _ = find_scripts(pattern = None)
+    for script in scripts:
+        if script.name == sys.argv[2]:
+            editor = os.getenv('EDITOR', 'vim')
+            os.execvp(editor, [editor, script.path])
+
+elif sys.argv[1] == 'path':
+    if len(sys.argv) < 3:
+        sys.exit('Usage: {} path <script>'.format(os.path.basename(sys.argv[0])))
     scripts, _ = find_scripts(pattern = None)
     for script in scripts:
         if script.name == sys.argv[2]:

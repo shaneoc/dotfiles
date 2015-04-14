@@ -4,6 +4,12 @@ _sc ()
     local cmd=${COMP_WORDS[0]}
     if [ $COMP_CWORD -eq 1 ]; then
         COMPREPLY=($(compgen -W "$($cmd --names)" -- $cur))
+    elif [ $COMP_CWORD -eq 2 ]; then
+        local arg="${COMP_WORDS[1]}"
+        if [ "$arg" == "edit" -o "$arg" == "path" ]; then
+            COMPREPLY=($(compgen -W "$($cmd --names)" -- $cur))
+        fi
+
     # TODO: modify this to allow tab completion for script arguments
     # elif [ $COMP_CWORD -eq 2 ]; then
     #     local script="${COMP_WORDS[1]}"
