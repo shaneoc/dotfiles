@@ -67,6 +67,9 @@ set tabstop=4
 set shiftwidth=4
 set expandtab
 
+" turn off expandtab in Makefiles
+autocmd FileType make set noexpandtab
+
 " if we have a mouse, use it
 if has('mouse')
     set mouse=a
@@ -151,6 +154,9 @@ nnoremap <leader>ev :e $MYVIMRC<cr>
 nnoremap <leader>sv :so $MYVIMRC<cr>
 nnoremap <leader>w- O<esc>80i-<esc>j^
 nnoremap <leader>tl :TlistToggle<cr>
+nnoremap <leader>csv :setlocal ts=
+nnoremap <leader>ch :setlocal ts-=5<cr>
+nnoremap <leader>cl :setlocal ts+=5<cr>
 nnoremap <silent><leader>/ :nohlsearch<cr>
 nnoremap <leader>msg O::msg_vdebug("shane: 
 nnoremap <c-l> 6zl
@@ -159,6 +165,7 @@ nnoremap <c-j> 4<c-e>
 nnoremap <c-k> 4<c-y>
 nnoremap <a-j> 10j
 nnoremap <a-k> 10k
+
 
 " set up quickfix/location list window mappings
 let g:toggle_list_no_mappings = 1
