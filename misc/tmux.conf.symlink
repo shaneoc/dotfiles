@@ -27,6 +27,9 @@ bind o choose-tree
 setw -g monitor-activity on
 set -g visual-activity on
 
+# Pass extra environment variables into new sessions
+set -ga update-environment ' SHANE_SC_PATH SHANE_PYTHON3_PATH'
+
 # Smart pane switching with awareness of vim splits
 bind h run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a h) || tmux select-pane -L"
 bind j run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a j) || tmux select-pane -D"
