@@ -1,0 +1,1 @@
+../thursday-notify.pl

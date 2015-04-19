@@ -19,11 +19,12 @@ let g:tmuxline_preset = {
     \'a'       : '#S',
     \'win'     : ['#I', '#W#F'],
     \'cwin'    : ['#I', '#W#F'],
+    \'x'       : '#(sc thursday-status print-status)',
     \'y'       : ['%Y-%m-%d', '%I:%M %P'],
     \'z'       : '#H',
     \'options' : {'status-justify' : 'left'}}
 " NOTE: if the tmuxline preset is changed, run TmuxlineSnapshot to update
-" ~/dotfiles/misc/tmux-tmuxline.conf.symlink
+" ~/dotfiles/public/misc/tmux-tmuxline.conf.symlink
 
 " configure tmux navigator
 let g:tmux_navigator_no_mappings = 1

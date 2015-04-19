@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+# sc-help: creates a unix domain socket which can broadcast messages to multiple listeners
+# sc-category: Utilities
+import sys
+import os
+import stat
+import socket
+import asyncore
+import asynchat
+
+msg_terminator = '\n'
+
+def main():
+    def print_usage():
+        sys.exit('Usage: {} <server|client|send> <socket path> [send text]'
+                .format(os.path.basename(sys.argv[0])))
+
+    if len(sys.argv) < 3:
+        print_usage()
+
+    action, filename = sys.argv[1], sys.argv[2]
+
+    if action == 'server':
+        filename = sys.argv[2]
+        try:
+            Server(filename)
+            asyncore.loop()
+        finally:
+            if issock(filename):
+                os.remove(filename)
+
+    elif action == 'client':
+        if not issock(filename):
+            sys.exit('Error: {} does not exist or is not a unix domain socket'
+                    .format(filename))
+
+        # TODO: this could be done using python only with asyncore
+        os.execvp('nc', ('nc', '-U', filename))
+
+    elif action == 'send':
+        if len(sys.argv) < 4:
+            print_usage()
+        if not issock(filename):
+            sys.exit('Error: {} does not exist or is not a unix domain socket'
+                    .format(filename))
+
+        send_text = sys.argv[3]
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(filename)
+        s.sendall(send_text + msg_terminator)
+        s.close()
+
+    else:
+        print_usage()
+
+def issock(path):
+    return os.path.exists(path) and stat.S_ISSOCK(os.stat(path).st_mode)
+
+class ServerClientHandler(asynchat.async_chat):
+    def __init__(self, server, sock):
+        asynchat.async_chat.__init__(self, sock=sock)
+        self.set_terminator(msg_terminator)
+        self.server  = server
+        self.ibuffer = []
+
+    def collect_incoming_data(self, data):
+        self.ibuffer.append(data)
+
+    def found_terminator(self):
+        data = ''.join(self.ibuffer)
+        self.ibuffer = []
+        if data:
+            print('message: {}'.format(data))
+            for client in self.server.clients:
+                client.push(data + msg_terminator)
+
+    def handle_close(self):
+        print('closing connection')
+        self.server.clients.remove(self)
+        asynchat.async_chat.handle_close(self)
+
+
+class Server(asyncore.dispatcher):
+    def __init__(self, filename):
+        asyncore.dispatcher.__init__(self)
+        self.clients = []
+        self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        print('binding to {}'.format(filename))
+        if issock(filename):
+            os.remove(filename)
+        if os.path.exists(filename):
+            sys.exit('Error: {} already exists and is not a socket'
+                    .format(filename))
+        self.bind(filename)
+        self.listen(1)
+
+    def handle_accept(self):
+        pair = self.accept()
+        if pair is not None:
+            sock, addr = pair
+            print('incoming connection')
+            self.clients.append(ServerClientHandler(self, sock))
+
+if __name__ == '__main__':
+    main()
