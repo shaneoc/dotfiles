@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# sc-help: manages connections required to show IRC status in the tmux status bar
+# sc-category: Communication
 import sys
 import os
 import subprocess
