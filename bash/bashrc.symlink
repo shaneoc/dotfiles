@@ -1,11 +1,5 @@
 # vim: ft=sh et sw=4 ts=4
 
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
-
 # Define helper functions for *.bashrc.sh scripts to use
 path_list_remove () {
     tmp=":$1:"
@@ -45,10 +39,14 @@ source_files () {
     local script_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
     local dotfiles_dir="$(dirname "$(dirname "$script_dir")")"
 
-    # Source all *.bashrc.sh files in the dotfiles directory
-    while read -d '' -r bashrc_file <&9; do
-        source "$bashrc_file"
-    done 9< <(find ${dotfiles_dir} -mindepth 2 -maxdepth 3 -regex '.*\.bashrc\.sh' -print0)
+    # Source *.bashrc.sh and *.env.sh files in the dotfiles directory
+    while read -d '' -r filename <&9; do
+        # We only execute *.bashrc.sh files in interactive mode
+        if [[ $- == *i* || $filename == *.env.sh ]]; then
+            # Pass the script filename as $1 ($0 would just contain "bash" since it's sourced)
+            source "$filename" "$filename"
+        fi
+    done 9< <(find ${dotfiles_dir} -mindepth 2 -maxdepth 3 -regex '.*\.\(bashrc\|env\)\.sh' -print0)
 
     # Collect all paths on the SHANE_BASHRC_PATH into an array
     local paths=()
@@ -61,11 +59,15 @@ source_files () {
     done
     IFS="$oldIFS"
 
-    # Source all *.bashrc.sh files in the paths from the SHANE_BASHRC_PATH
+    # Source *.bashrc.sh and *.env.sh files in the paths from SHANE_BASHRC_PATH
     for path in "${paths[@]}"; do
-        while read -d '' -r bashrc_file <&9; do
-            source "$bashrc_file"
-        done 9< <(find ${path} -maxdepth 2 -regex '.*\.bashrc\.sh' -print0)
+        while read -d '' -r filename <&9; do
+        # We only execute *.bashrc.sh files in interactive mode
+        if [[ $- == *i* || $filename == *.env.sh ]]; then
+            # Pass the script filename as $1 ($0 would just contain "bash" since it's sourced)
+            source "$filename" "$filename"
+        fi
+        done 9< <(find ${path} -maxdepth 2 -regex '.*\.\(bashrc\|env\)\.sh' -print0)
     done
 }
 source_files
