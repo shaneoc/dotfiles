@@ -29,7 +29,7 @@ elif action == 'client-daemon':
 
             def update_file():
                 f.seek(0)
-                f.write('{}:{}:{}\n'.format(num_mentions, num_messages, last_time))
+                f.write('{0}:{1}:{2}\n'.format(num_mentions, num_messages, last_time))
                 f.flush()
 
             update_file()
@@ -67,7 +67,7 @@ elif action == 'print-status':
         with open(status_filename, 'r') as f:
             num_mentions, num_messages, last_time = f.read().strip().split(':')
             time_since_message = '-' if last_time == '-' else (int(time()) - int(last_time))
-            print('{}:{}:{}'.format(num_mentions, num_messages, time_since_message))
+            print('{0}:{1}:{2}'.format(num_mentions, num_messages, time_since_message))
 
 else:
     print_usage()
