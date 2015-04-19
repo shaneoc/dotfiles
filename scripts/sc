@@ -69,7 +69,9 @@ if len(sys.argv) < 2 or sys.argv[1] == 'ls':
     def highlight(string):
         def repl(m):
             return '\033[0;32m' + m.group() + '\033[0m'
-        return re.sub(pattern, repl, string, flags = re.I) if pattern else string
+        if pattern:
+            string = re.sub(re.compile(pattern, re.IGNORECASE), repl, string)
+        return string
 
     def print_category(this_category):
         print(highlight(this_category) + ':')
@@ -121,4 +123,4 @@ else:
         if script.name == sys.argv[1]:
             os.execvp(script.path, sys.argv[1:])
 
-    sys.exit('Error: {} is not a valid script name'.format(sys.argv[1]))
+    sys.exit('Error: {0} is not a valid script name'.format(sys.argv[1]))
