@@ -7,7 +7,7 @@ import subprocess
 from time import time
 
 def print_usage():
-    sys.exit('Usage: {} <server-daemon|client-daemon|print-status>'
+    sys.exit('Usage: {0} <server-daemon|client-daemon|print-status>'
             .format(os.path.basename(sys.argv[0])))
 
 if len(sys.argv) < 2:
@@ -44,7 +44,7 @@ elif action == 'client-daemon':
                     break
                 line = line.strip()
 
-                print('received message: {}'.format(line))
+                print('received message: {0}'.format(line))
                 if line == 'send-text':
                     num_messages = 0
                     num_mentions = 0
