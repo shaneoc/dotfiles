@@ -66,8 +66,26 @@ elif action == 'print-status':
     if os.path.exists(status_filename):
         with open(status_filename, 'r') as f:
             num_mentions, num_messages, last_time = f.read().strip().split(':')
-            time_since_message = '-' if last_time == '-' else (int(time()) - int(last_time))
-            print('{}:{}:{}'.format(num_mentions, num_messages, time_since_message))
+            if last_time == '-':
+                time_str = '-'
+            else:
+                time_diff = int(time()) - int(last_time)
+                days      = time_diff / (60*60*24)
+                time_diff = time_diff % (60*60*24)
+                hours     = time_diff / (60*60)
+                time_diff = time_diff % (60*60)
+                minutes   = time_diff / 60
+                seconds   = time_diff % 60
+                if days:
+                    time_str = '{0}d{1}h'.format(days, hours)
+                elif hours:
+                    time_str = '{0}h{1}m'.format(hours, minutes)
+                elif minutes:
+                    time_str = '{0}m{1}s'.format(minutes, seconds)
+                else:
+                    time_str = '{0}s'.format(seconds)
+
+            print('{}:{}:{}'.format(num_mentions, num_messages, time_str))
 
 else:
     print_usage()
