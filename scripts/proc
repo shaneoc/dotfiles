@@ -1,0 +1,272 @@
+#!/usr/bin/env python
+# sc-help: manages long-running processes
+# sc-category: Utilities
+import sys
+import os
+import stat
+import socket
+import asyncore
+import asynchat
+import subprocess
+import marshal
+import signal
+
+def print_usage():
+    sys.exit('Usage: {0} <ls|start|stop|watch|autorun>'.format(os.path.basename(sys.argv[0])))
+
+def main():
+    if len(sys.argv) < 2:
+        print_usage()
+
+    action = sys.argv[1]
+    socket_filename = os.environ['HOME'] + '/.proc-control'
+
+    if action == 'start-server':
+        Server.start(socket_filename)
+    elif action == 'start':
+        if len(sys.argv) < 3:
+            sys.exit('Usage: {0} start <command>'
+                    .format(os.path.basename(sys.argv[0])))
+
+        try:
+            result = send_message(socket_filename, 'start', sys.argv[2:])
+        except Exception as e:
+            sys.exit('Error: could not communicate with daemon: {0}'.format(e))
+
+        if result == False:
+            print('proc daemon not running, starting it')
+            Server.start(socket_filename)
+
+            try:
+                result = send_message(socket_filename, 'start', sys.argv[2:])
+            except Exception as e:
+                sys.exit('Error: could not communicate with daemon: {0}'.format(e))
+
+            if result == False:
+                sys.exit('Error: daemon did not start')
+
+        print(repr(result))
+
+    elif action == 'ls':
+        try:
+            result = send_message(socket_filename, 'ls')
+        except Exception as e:
+            sys.exit('Error: could not communicate with daemon: {0}'.format(e))
+
+        if result == False:
+            print('No processes (proc daemon is not running)')
+        else:
+            print(repr(result))
+    elif action == 'killall':
+        try:
+            result = send_message(socket_filename, 'killall')
+        except Exception as e:
+            sys.exit('Error: could not communicate with daemon: {0}'.format(e))
+
+        if result == False:
+            print('No process killed (proc daemon is not running)')
+        else:
+            print(repr(result))
+
+def set_death_sig():
+    import ctypes
+    from ctypes.util import find_library
+    libc = ctypes.CDLL(find_library('c'))
+    PR_SET_PDEATHSIG = 1
+    SIGTERM = 15
+    libc.prctl(PR_SET_PDEATHSIG, SIGTERM, 0, 0, 0)
+
+# TODO: find a way to change the server process name for top/ps
+# def set_proc_name(name):
+#     import ctypes
+#     from ctypes.util import find_library
+#     libc = ctypes.CDLL(find_library('c'))
+#     PR_SET_NAME = 15
+#     libc.prctl(PR_SET_NAME, ctypes.c_char_p(name), 0, 0, 0)
+
+class Server:
+    def __init__(self, socket_filename):
+        self.socket = ServerSocket(self, socket_filename)
+        self.children = []
+
+    @classmethod
+    def start(cls, socket_filename):
+        def sig_handler(signum, frame):
+            sig_handler.called = True
+        sig_handler.called = False
+        signal.signal(signal.SIGUSR1, sig_handler)
+
+        parent_pid = os.getpid()
+        if os.fork() == 0:
+            # TODO: make sure SIG_DFL is what it was set to before and not SIG_IGN
+            # TODO: is there a way to reset all signal handlers? Maybe calling exec I guess
+            signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+            # set_proc_name('proc')
+            cls(socket_filename)
+            os.kill(parent_pid, signal.SIGUSR1)
+            asyncore.loop()
+            sys.exit()
+        else:
+            while not sig_handler.called:
+                signal.pause()
+            signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+
+    def start_process(self, args):
+        class ProcessInfo:
+            def __init__(self, proc, args):
+                self.proc = proc
+                self.args = args
+
+        proc = subprocess.Popen(args,
+            preexec_fn = set_death_sig,
+            close_fds = True,
+            stdin = subprocess.PIPE,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.STDOUT)
+
+        # TODO: figure out what happens if I never read these pipes (will a
+        # buffer just keep filling up?). Also implement the 'watch' command to
+        # look at what the process is printing.
+        # The python documentation says this next to subprocess.wait():
+        # This will deadlock when using stdout=PIPE and/or stderr=PIPE and the
+        # child process generates enough output to a pipe such that it blocks
+        # waiting for the OS pipe buffer to accept more data. Use communicate()
+        # to avoid that.
+
+        # TODO: set up the supervisor process to be able to have it's stdout
+        # monitored as well (right now it just prints to whatever terminal
+        # started it, that should be changed at least)
+
+        self.children.append(ProcessInfo(proc = proc, args = args))
+
+msg_terminator = '\n'
+
+def wrap_message(command, args = None):
+    parts = [command] + (args if args != None else [])
+    return marshal.dumps(parts)
+    # TODO: consider changing the binary procotol to be a "size + data" format
+    # instead of "data + newline"
+
+def unwrap_message(message):
+    parts = marshal.loads(message)
+    return parts[0], parts[1:]
+
+def send_message(socket_filename, command, args = None, start_server = True):
+    if not os.path.exists(socket_filename):
+        return False
+    if not issock(socket_filename):
+        raise Exception('{0} is not a unix domain socket'.format(socket_filename))
+
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        s.connect(socket_filename)
+    except socket.error as e:
+        return False
+
+    s.sendall(wrap_message(command, args) + msg_terminator)
+    bufparts = []
+    while True:
+        # TODO: be able to time out on this recv
+        # http://stackoverflow.com/questions/2719017/how-to-set-timeout-on-pythons-socket-recv-method
+        recv_data = s.recv(4096)
+        if recv_data == '':
+            break
+        term_idx = recv_data.find(msg_terminator)
+        if term_idx == -1:
+            bufparts.append(recv_data)
+        else:
+            bufparts.append(recv_data[0:term_idx])
+            break
+    s.close()
+    return unwrap_message(''.join(bufparts))
+
+class ServerClientHandler(asynchat.async_chat):
+    def __init__(self, server, sock):
+        asynchat.async_chat.__init__(self, sock=sock)
+        self.set_terminator(msg_terminator)
+        self.server  = server
+        self.ibuffer = []
+
+    def collect_incoming_data(self, data):
+        self.ibuffer.append(data)
+
+    def found_terminator(self):
+        data = ''.join(self.ibuffer)
+        self.ibuffer = []
+        if data:
+            command, args = unwrap_message(data)
+            self.handle_command(command, args)
+
+    def send_response(self, response, args = None):
+        self.push(wrap_message(response, args) + msg_terminator)
+
+    def handle_command(self, command, args):
+        if command == 'start':
+            try:
+                self.server.start_process(args)
+                self.send_response('started')
+            except Exception as e:
+                self.send_response('error', [str(e)])
+
+        elif command == 'ls':
+            response_args = []
+            for child in self.server.children:
+                response_args.append((child.proc.pid, ' '.join(child.args)))
+            self.send_response('children', response_args)
+
+        elif command == 'killall':
+            num_children = len(self.server.children)
+            for child in self.server.children:
+                child.proc.terminate()
+                # TODO: wait for SIGCHLD signals from children before
+                # continuing (and if timeout occurs, use SIGKILL)
+            self.send_response('success', [num_children])
+            sys.exit()
+
+        elif command == 'stop':
+            if len(args) < 1:
+                self.send_response('error', 'no pid specified')
+            else:
+                pass
+                # pid_to_stop = args[1]
+                # for child in self.server.children:
+                #     if child.proc.pid == pid_to_stop:
+                #         child.proc. 
+
+def issock(path):
+    return os.path.exists(path) and stat.S_ISSOCK(os.stat(path).st_mode)
+
+# TODO: waiting on fds + signals options:
+# ** self-pipe: http://www.pocketnix.org/doc/Fighting_set__wakeup__fd/
+# pselect/ppoll (apparently no python api and glibc used to have a broken version)
+# signalfd (a simple version of the self-pipe, though no python api and needs newer kernel version)
+
+class ServerSocket(asyncore.dispatcher):
+    def __init__(self, server, socket_filename):
+        asyncore.dispatcher.__init__(self)
+
+        self.server = server
+        # self.clients = []
+
+        self.__start(socket_filename)
+
+    def __start(self, socket_filename):
+        self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        print('binding to {}'.format(socket_filename))
+        if issock(socket_filename):
+            os.remove(socket_filename)
+        if os.path.exists(socket_filename):
+            sys.exit('Error: {} already exists and is not a socket'
+                    .format(socket_filename))
+        self.bind(socket_filename)
+        self.listen(1)
+
+    def handle_accept(self):
+        pair = self.accept()
+        if pair is not None:
+            sock, addr = pair
+            ServerClientHandler(self.server, sock)
+            # self.clients.append(ServerClientHandler(self, sock))
+
+if __name__ == '__main__':
+    main()
