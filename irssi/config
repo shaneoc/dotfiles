@@ -262,6 +262,7 @@ settings = {
     real_name = "Shane O'Connell";
     user_name = "shane";
     nick = "shane";
+    timestamp_format = "%l:%M:%S %p";
   };
   "fe-text" = { actlist_sort = "refnum"; };
 };
