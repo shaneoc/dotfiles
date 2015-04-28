@@ -4,6 +4,7 @@
 
 find . -type f -iname '*.nfo' -exec rm -i {} \;
 find . -type f -iname '*.txt' -exec rm -i {} \;
+find . -type f -iname '*.jpg' -exec rm -i {} \;
 find . -type f -iname '*sample*' -exec rm -i {} \;
 while [ -n "$(find . -type d -empty -printf '.')" ]; do
     find . -type d -empty -prune -exec rm -id {} \;
