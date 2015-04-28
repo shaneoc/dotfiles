@@ -9,6 +9,11 @@ import shutil
 import tempfile
 import hashlib
 
+# TODO: find out if I should be setting any qcow2 arguments on new images, for speed,
+# or if I should use some other image type entirely
+
+# TODO: find out if I should have a swap partition in VMs
+
 tempdir = tempfile.TemporaryDirectory()
 
 def parse_args():
@@ -22,13 +27,14 @@ def parse_args():
         help='A preexisting image to use as a backing store for a new disk image')
     parser.add_argument('--copy-image-from', metavar='FILENAME',
         help='A preexisting image to copy from')
-    # TODO: implement this
-    # parser.add_argument('--copy-into-image', action='append', nargs=2,
-    #     metavar=('HOST_PATH','VM_PATH'),
-    #     help='Specifies a file or directory to copy into the VM image '
-    #         '(can be specified multiple times)')
-    parser.add_argument('--user-data', metavar='FILENAME',
-        help='The user data file to use')
+    parser.add_argument('--new-image-size', metavar='SIZE',
+        help='When using --copy-image-from, specifies a size for the new image')
+    parser.add_argument('--copy-into-image', action='append', nargs=2,
+        metavar=('HOST_PATH','VM_PATH'),
+        help='Specifies a file or directory to copy into the VM image '
+            '(can be specified multiple times)')
+    parser.add_argument('--user-data', action='append', metavar='FILENAME',
+        help='A user data file to use (can be specified multiple times)')
     parser.add_argument('--cpus', type=int, default=2,
         help='Number of CPUs (default: %(default)s)')
     parser.add_argument('--mem', default='1G',
@@ -39,6 +45,8 @@ def parse_args():
     # parser.add_argument('--ephemeral', action='store_true',
     #     help='Uses a temporary copy of the image specified so that changes '
     #         'will not be saved on VM shutdown')
+    parser.add_argument('--virtfs', action='append', metavar='ARGS',
+        help='Adds a virtfs interface')
 
     # network options
     parser.add_argument('--net-nat', action='store_true',
@@ -47,7 +55,7 @@ def parse_args():
     parser.add_argument('--net-nat-forward', action='append', nargs=3,
         metavar=('TYPE', 'HOST_ADDR', 'GUEST_PORT'),
         help="Sets the NAT network to forward a port from the host (TYPE "
-            "is 'tdp' or 'udp', HOST_ADDR is either <ip>:<port> or :<port>)")
+            "is 'tcp' or 'udp', HOST_ADDR is either <ip>:<port> or :<port>)")
     parser.add_argument('--net-nat-restrict', action='store_true',
         help='Sets the NAT network to disallow outgoing connections completely')
 
@@ -61,6 +69,7 @@ def parse_args():
 def main():
     args = parse_args()
 
+    # TODO: consider if you should use -nodefault
     kvm_args = ['kvm', '-nographic', '-smp', str(args.cpus), '-m', args.mem]
 
     # handle name
@@ -83,10 +92,20 @@ def main():
             sys.exit('Error: {} does not exist'.format(args.image))
 
     if args.copy_image_from:
-        shutil.copyfile(args.copy_image_from, args.image)
+        if args.new_image_size:
+            call('qemu-img', 'create', '-f', 'qcow2', args.image,
+                    args.new_image_size)
+            call('virt-resize', '--expand', '/dev/sda1', args.copy_image_from,
+                    args.image)
+        else:
+            shutil.copyfile(args.copy_image_from, args.image)
     elif args.create_overlay_from:
         call('qemu-img', 'create', '-f', 'qcow2',
                 '-b', args.create_overlay_from, args.image)
+
+    if args.copy_into_image:
+        for host_path, vm_path in args.copy_into_image:
+            call('virt-copy-in', '-a', args.image, host_path, vm_path)
 
     kvm_args += ['-drive',
             'file={},if=virtio'.format(args.image.replace(',',',,'))]
@@ -125,6 +144,11 @@ def main():
             # TODO: set IP address as well
         net_count += 1
 
+    # handle virtfs
+    if args.virtfs:
+        for fs_args in args.virtfs:
+            kvm_args += ['-virtfs', fs_args]
+
     call(*kvm_args)
 
 def call(*args):
@@ -133,13 +157,17 @@ def call(*args):
 
 def create_config_disk(instance_id, hostname = None, user_data = None, dsmode = None):
     # https://cloudinit.readthedocs.org/en/latest/topics/datasources.html#no-cloud
-    user_data = user_data or '/dev/null'
+    user_data = user_data or ['/dev/null']
     dsmode    = dsmode    or 'net'
     temp_user_data   = os.path.join(tempdir.name, 'user-data')
     temp_meta_data   = os.path.join(tempdir.name, 'meta-data')
     temp_config_disk = os.path.join(tempdir.name, 'config-disk.img')
 
-    shutil.copyfile(user_data, temp_user_data)
+    if len(user_data) == 1:
+        shutil.copyfile(user_data[0], temp_user_data)
+    else:
+        call('write-mime-multipart', '-o', temp_user_data, *user_data)
+
     with open(temp_meta_data, 'w') as f:
         f.write('instance-id: {}\n'.format(instance_id))
         if hostname != None:
@@ -155,13 +183,12 @@ def create_config_disk(instance_id, hostname = None, user_data = None, dsmode = 
 def get_helper():
     # TODO: find a better way to do this
     from stat import S_ISUID
-    path = '/usr/lib/qemu-bridge-helper'
+    path = '/usr/lib/qemu/qemu-bridge-helper'
     if not (os.stat(path).st_mode & S_ISUID):
-        sys.exit(
-            'Error: /usr/lib/qemu-bridge-helper has incorrect permissions, '
+        sys.exit(('Error: {0} has incorrect permissions, '
             'maybe you need to run this?\n'
-            'sudo dpkg-statoverride --update --add root shane 4754 '
-            '/usr/lib/qemu-bridge-helper')
+            'sudo dpkg-statoverride --update --add root shane 4754 {0}')
+                .format(path))
     return path
 
 if __name__ == '__main__':
