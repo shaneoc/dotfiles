@@ -1,0 +1,12 @@
+#!/bin/bash
+# sc-help: runs a command with output buffering turned off
+# sc-category: Utilities
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $(basename "$0") <command>"
+    echo "Runs <command> with output buffering turned off"
+    exit 1
+else
+    stdbuf -o 0 "$@"
+fi
+
