@@ -1,0 +1,5 @@
+#!/bin/sh
+# sc-help: disk usage analyzer with an ncurses interface
+# sc-category: Utilities
+
+exec /usr/bin/ncdu "$@"

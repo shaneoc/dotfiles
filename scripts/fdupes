@@ -1,0 +1,5 @@
+#!/bin/sh
+# sc-help: identifies and/or deletes duplicate files
+# sc-category: Utilities
+
+exec /usr/bin/fdupes "$@"
