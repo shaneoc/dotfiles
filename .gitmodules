@@ -55,3 +55,6 @@
 [submodule "vim/vimfiles/bundle/vim-repeat"]
 	path = vim/vimfiles/bundle/vim-repeat
 	url = https://github.com/tpope/vim-repeat.git
+[submodule "vim/vimfiles/bundle/vim-fugitive"]
+	path = vim/vimfiles/bundle/vim-fugitive
+	url = https://github.com/tpope/vim-fugitive.git
