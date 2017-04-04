@@ -2,7 +2,7 @@
 
 # Define helper functions for *.bashrc.sh scripts to use
 path_list_remove () {
-    tmp=":$1:"
+    local tmp=":$1:"
     while [[ "$tmp" =~ ":$2:" ]]; do
         tmp="${tmp/:$2:/:}"
     done
