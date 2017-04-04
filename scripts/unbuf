@@ -7,6 +7,6 @@ if [ $# -eq 0 ]; then
     echo "Runs <command> with output buffering turned off"
     exit 1
 else
-    stdbuf -o 0 "$@"
+    exec stdbuf -o 0 "$@"
 fi
 
