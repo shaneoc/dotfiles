@@ -7,3 +7,10 @@
 	tool = vimdiff
 [core]
 	excludesfile = ~/.gitignore_global
+[alias]
+	co = checkout
+	br = branch
+	ci = commit
+	st = status
+	last = log -1 HEAD
+	di = diff --name-status
