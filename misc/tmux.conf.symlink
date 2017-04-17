@@ -33,16 +33,16 @@ set -ga update-environment ' SHANE_SC_PATH SHANE_PYTHON3_PATH'
 # Set status bar to update every two seconds
 set -g status-interval 2
 
-# Smart pane switching with awareness of vim splits
-bind h run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a h) || tmux select-pane -L"
-bind j run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a j) || tmux select-pane -D"
-bind k run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a k) || tmux select-pane -U"
-bind l run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a l) || tmux select-pane -R"
-# Add C-* versions too since I hit them by mistake sometimes
-bind C-h run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a C-h) || tmux select-pane -L"
-bind C-j run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a C-j) || tmux select-pane -D"
-bind C-k run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a C-k) || tmux select-pane -U"
-bind C-l run "(tmux display-message -p '#{pane_current_command}' | grep -iqE '(^|\/)vim(diff)?$' && tmux send-keys C-a C-l) || tmux select-pane -R"
+# Set pane switching controls
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+# Add C-* versions too in case I hit them by mistake sometimes
+bind C-h select-pane -L
+bind C-j select-pane -D
+bind C-k select-pane -U
+bind C-l select-pane -R
 
 # source tmuxline colors so that I see them before opening vim
 source-file ~/.tmux-tmuxline.conf

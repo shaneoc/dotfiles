@@ -19,23 +19,11 @@ let g:tmuxline_preset = {
     \'a'       : '#S',
     \'win'     : ['#I', '#W#F'],
     \'cwin'    : ['#I', '#W#F'],
-    \'x'       : '#(sc thursday-status print-status)',
     \'y'       : ['%Y-%m-%d', '%I:%M %P'],
     \'z'       : '#H',
     \'options' : {'status-justify' : 'left'}}
 " NOTE: if the tmuxline preset is changed, run TmuxlineSnapshot to update
 " ~/dotfiles/public/misc/tmux-tmuxline.conf.symlink
-
-" configure tmux navigator
-let g:tmux_navigator_no_mappings = 1
-nnoremap <silent> <c-a>h :TmuxNavigateLeft<cr>
-nnoremap <silent> <c-a>j :TmuxNavigateDown<cr>
-nnoremap <silent> <c-a>k :TmuxNavigateUp<cr>
-nnoremap <silent> <c-a>l :TmuxNavigateRight<cr>
-nnoremap <silent> <c-a><c-h> :TmuxNavigateLeft<cr>
-nnoremap <silent> <c-a><c-j> :TmuxNavigateDown<cr>
-nnoremap <silent> <c-a><c-k> :TmuxNavigateUp<cr>
-nnoremap <silent> <c-a><c-l> :TmuxNavigateRight<cr>
 
 " configure colorscheme
 set background=dark
@@ -65,7 +53,7 @@ if has('gui_running')
 endif
 
 set tabstop=4
-set shiftwidth=4
+set shiftwidth=2
 set expandtab
 
 " turn off expandtab in Makefiles
@@ -99,8 +87,6 @@ set smartcase
 
 " turn on modeline
 set modeline
-
-set shiftwidth=2
 
 " use very nomagic by default
 nnoremap / /\V
@@ -207,7 +193,7 @@ nnoremap <c-]> g<c-]>
 set colorcolumn=81
 
 " fix tab completion to make sense
-set wildmode=longest,list,full
+set wildmode=list:longest
 
 " handle quartus.ini files
 augroup quartusini
