@@ -208,4 +208,4 @@ augroup sdc_files
 augroup END
 
 au BufNewFile,BufRead *.cl setfiletype c
-
+au BufNewFile,BufRead *.ts setfiletype typescript

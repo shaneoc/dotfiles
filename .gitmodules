@@ -58,3 +58,6 @@
 [submodule "vim/vimfiles/bundle/vim-dirdiff"]
 	path = vim/vimfiles/bundle/vim-dirdiff
 	url = https://github.com/will133/vim-dirdiff.git
+[submodule "vim/vimfiles/bundle/typescript-vim"]
+	path = vim/vimfiles/bundle/typescript-vim
+	url = https://github.com/leafgarland/typescript-vim.git
